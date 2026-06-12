@@ -1,0 +1,41 @@
+name: Package & Release Skills
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '*/SKILL.md'
+      - '*/references/**'
+      - '*/scripts/**'
+      - '*/assets/**'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set release tag
+        id: tag
+        run: echo "name=v$(date +'%Y.%m.%d')-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Package all skills
+        run: |
+          mkdir -p dist
+          for dir in */; do
+            [ -f "${dir}SKILL.md" ] || continue
+            skill_name="${dir%/}"
+            zip -r "dist/${skill_name}.skill" "$dir"
+            echo "Packaged ${skill_name}.skill"
+          done
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: ${{ steps.tag.outputs.name }}
+          generate_release_notes: true
+          files: dist/*.skill
